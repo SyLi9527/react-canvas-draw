@@ -50,5 +50,10 @@ export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY} =
   if (ch > ih) ch = ih;
 
   // fill image in dest. rectangle
-  ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
+  // fit the image into the rectangle
+  if (nw > nh) {
+    ctx.drawImage(img, x, y + 1 / 2 * h - 1 / 2 * nh, nw, nh);
+  } else {
+    ctx.drawImage(img, x + 1 / 2 * w - 1 / 2 * nw, y, nw, nh);
+  }
 }
