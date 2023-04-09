@@ -15,7 +15,7 @@ export class DefaultState {
     const { disabled, enablePanAndZoom, mouseZoomFactor } = canvasDraw.props;
     if (disabled ) {
       return new DisabledState();
-    } else if (enablePanAndZoom && e.ctrlKey) {
+    } else if (enablePanAndZoom) {
       e.preventDefault();
       canvasDraw.coordSystem.scaleAtClientPoint(mouseZoomFactor * e.deltaY, clientPointFromEvent(e));
     }
@@ -25,7 +25,7 @@ export class DefaultState {
   handleDrawStart = (e, canvasDraw) => {
     if (canvasDraw.props.disabled) {
       return new DisabledState();
-    } else if (e.ctrlKey && canvasDraw.props.enablePanAndZoom) {
+    } else if (e.button === 1 && canvasDraw.props.enablePanAndZoom) {
       return (new PanState()).handleDrawStart(e, canvasDraw);
     } else {
       return (new WaitForPinchState()).handleDrawStart(e, canvasDraw);
@@ -354,26 +354,36 @@ export class DrawingState {
   handleDrawMove = (e, canvasDraw) => {
     e.preventDefault();
 
-    const { x, y } = viewPointFromEvent(canvasDraw.coordSystem, e);
+    var { x, y } = viewPointFromEvent(canvasDraw.coordSystem, e);
     canvasDraw.lazy.update({ x, y });
     const isDisabled = !canvasDraw.lazy.isEnabled();
 
     if (!this.isDrawing || isDisabled) {
       // Start drawing and add point
-      canvasDraw.points.push(canvasDraw.clampPointToDocument(canvasDraw.lazy.brush.toObject()));
-      this.isDrawing = true;
+      var { x, y } = canvasDraw.clampPointToDocument(canvasDraw.lazy.brush.toObject());
+      if (x === -1 || y === -1) {
+
+      } else {
+        canvasDraw.points.push({ x, y });
+        this.isDrawing = true;
+      }
+      
+      
+    } // Add new point
+
+    var { x, y } = canvasDraw.clampPointToDocument(canvasDraw.lazy.brush.toObject());
+    if (x === -1 || y === -1) {
+
+    } else {
+      canvasDraw.points.push({ x, y }); // Draw current points
+      canvasDraw.drawPoints({
+        points: canvasDraw.points,
+        brushColor: canvasDraw.props.brushColor,
+        brushRadius: canvasDraw.props.brushRadius
+      });
     }
 
-    // Add new point
-    canvasDraw.points.push(canvasDraw.clampPointToDocument(canvasDraw.lazy.brush.toObject()));
-
-    // Draw current points
-    canvasDraw.drawPoints({
-      points: canvasDraw.points,
-      brushColor: canvasDraw.props.brushColor,
-      brushRadius: canvasDraw.props.brushRadius
-    });
-
+    
     return this;
   };
 

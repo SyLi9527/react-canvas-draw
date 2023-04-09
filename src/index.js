@@ -124,12 +124,34 @@ export default class CanvasDraw extends PureComponent {
     let lines = [];
     if (this.lines.length) {
       lines = this.lines.slice(0, -1);
-    } else if (this.erasedLines.length) {
-      lines = this.erasedLines.pop();
-    }
-    this.clearExceptErasedLines();
-    this.simulateDrawingLines({ lines, immediate: true });
-    this.triggerOnChange();
+      this.erasedLines.push(this.lines.slice(-1));
+      this.clearExceptErasedLines();
+
+      this.simulateDrawingLines({
+        lines: lines,
+        immediate: true
+      });
+
+      this.triggerOnChange();
+    } 
+  };
+
+  redo = () => {
+    let lines = [];
+    
+    if (this.erasedLines.length) {
+      lines =  this.lines.slice();
+      lines = lines.concat(this.erasedLines.pop());
+
+      this.clearExceptErasedLines();
+      
+      this.simulateDrawingLines({
+        lines: lines,
+        immediate: true
+      });
+
+      this.triggerOnChange();
+    } 
   };
 
   eraseAll = () => {
@@ -179,12 +201,32 @@ export default class CanvasDraw extends PureComponent {
 
     let context = canvasToExport.getContext("2d");
 
+    let coordSystem = this.coordSystem;
+    coordSystem.setView({ scale: 1, x: 0, y: 0 });
+
     //cache height and width
     let width = canvasToExport.width;
     let height = canvasToExport.height;
 
     //get the current ImageData for the canvas
-    let storedImageData = context.getImageData(0, 0, width, height);
+    var storedImageData; //store the current globalCompositeOperation
+
+    if (this.props.imgSrc) {
+      var img = this.image;
+      var iw = img.width,
+          ih = img.height,
+          r = Math.min(width / iw, height / ih),
+          nw = iw * r,
+          // new prop. width
+          nh = ih * r;
+      if (nw > nh) {
+        storedImageData = context.getImageData(0, height/2 - nh/2, nw, nh);
+      } else {
+        storedImageData = context.getImageData(width/2 - nw/2, 0, nw, nh);
+      }
+    } else {
+      storedImageData = context.getImageData(0, 0, width, height);
+    }
 
     //store the current globalCompositeOperation
     var compositeOperation = context.globalCompositeOperation;
@@ -210,15 +252,29 @@ export default class CanvasDraw extends PureComponent {
     if (!fileType) fileType = "png";
 
     // Export the canvas to data URL
-    let imageData = canvasToExport.toDataURL(`image/${fileType}`);
+    var imageData; //clear the canvas
 
     //clear the canvas
     context.clearRect(0, 0, width, height);
 
-    //restore it with original / cached ImageData
-    context.putImageData(storedImageData, 0, 0);
+    if (this.props.imgSrc) {
+      var img = this.image;
+      var iw = img.width,
+          ih = img.height,
+          r = Math.min(width / iw, height / ih),
+          nw = iw * r,
+          nh = ih * r;
+      if (nw > nh) {
 
-    //reset the globalCompositeOperation to what it was
+        context.putImageData(storedImageData, 0, height/2 - nh/2); //reset the globalCompositeOperation to what it was
+      } else {
+        context.putImageData(storedImageData, width/2 - nw/2, 0); //reset the globalCompositeOperation to what it was
+      }
+    } else {
+      context.putImageData(storedImageData, 0, 0); //reset the globalCompositeOperation to what it was
+    }
+
+    imageData = canvasToExport.toDataURL("image/" + fileType);
     context.globalCompositeOperation = compositeOperation;
 
     return imageData;
@@ -385,6 +441,7 @@ export default class CanvasDraw extends PureComponent {
                 }
               }}
               style={{ ...canvasStyle }}
+              onMouseLeave={isInterface ? this.handleMouseOut : undefined}
               onMouseDown={isInterface ? this.handleDrawStart : undefined}
               onMouseMove={isInterface ? this.handleDrawMove : undefined}
               onMouseUp={isInterface ? this.handleDrawEnd : undefined}
@@ -403,23 +460,39 @@ export default class CanvasDraw extends PureComponent {
   ///// Event Handlers
 
   handleWheel = (e) => {
+    if (!this.interactionSM) {
+      this.interactionSM = new DefaultState();
+    }
     this.interactionSM = this.interactionSM.handleMouseWheel(e, this);
   };
 
   handleDrawStart = (e) => {
+    if (!this.interactionSM) {
+      this.interactionSM = new DefaultState();
+    }
     this.interactionSM = this.interactionSM.handleDrawStart(e, this);
     this.mouseHasMoved = true;
   };
 
   handleDrawMove = (e) => {
+    if (!this.interactionSM) {
+      this.interactionSM = new DefaultState();
+    }
     this.interactionSM = this.interactionSM.handleDrawMove(e, this);
     this.mouseHasMoved = true;
   };
 
   handleDrawEnd = (e) => {
+    if (!this.interactionSM) {
+      this.interactionSM = new DefaultState();
+    }
     this.interactionSM = this.interactionSM.handleDrawEnd(e, this);
     this.mouseHasMoved = true;
   };
+
+  handleMouseOut = () => {
+    console.log('Mouse out')
+  }
 
   applyView = () => {
     if (!this.ctx.drawing) {
@@ -471,10 +544,35 @@ export default class CanvasDraw extends PureComponent {
 
   clampPointToDocument = (point) => {
     if (this.props.clampLinesToDocument) {
-      return {
-        x: Math.max(Math.min(point.x, this.props.canvasWidth), 0),
-        y: Math.max(Math.min(point.y, this.props.canvasHeight), 0),
-      };
+      var nw = this.nw,
+            nh = this.hn,
+            height = this.props.canvasHeight,
+            width = this.props.canvasWidth;
+      var img = this.image;
+      var iw = img.width,
+          ih = img.height,
+          r = Math.min(width / iw, height / ih),
+          nw = iw * r,
+          nh = ih * r;
+      if ((nw > nh) && (point.x < 0 || point.x > nw || point.y < height / 2 - nh / 2 || point.y > height / 2 + nh / 2)) {
+        return {
+          x: -1,
+          y: -1
+        };
+      } 
+      else if ((nw < nh) && (point.y < 0 || point.y > nh || point.x < width / 2 - nw / 2 || point.x > width / 2 + nw / 2)) {
+        return {
+          x: -1,
+          y: -1
+        };
+      } 
+      else {
+        return {
+          x: Math.max(Math.min(point.x, this.props.canvasWidth), 0),
+          y: Math.max(Math.min(point.y, this.props.canvasHeight), 0)
+        };
+      }
+      
     } else {
       return point;
     }
@@ -615,7 +713,7 @@ export default class CanvasDraw extends PureComponent {
   };
 
   loop = ({ once = false } = {}) => {
-    if (this.mouseHasMoved || this.valuesChanged) {
+    if (this.lazy && (this.mouseHasMoved || this.valuesChanged)) {
       const pointer = this.lazy.getPointerCoordinates();
       const brush = this.lazy.getBrushCoordinates();
 
