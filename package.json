@@ -1,7 +1,7 @@
 {
-  "name": "react-canvas-draw",
+  "name": "tweaked-canvas-draw",
   "version": "1.2.1",
-  "description": "A simple yet powerful canvas-drawing component for React.",
+  "description": "A simple yet powerful canvas-drawing component for React, but fixed bugs and did some adjustments.",
   "main": "lib/index.js",
   "module": "es/index.js",
   "files": [
@@ -51,15 +51,12 @@
     "react-dom": "^16.2.0",
     "style-loader": "^0.19.1"
   },
-  "author": {
-    "name": "Martin Beierling",
-    "email": "mbeierling@gmail.com"
-  },
-  "homepage": "https://embiem.github.io/react-canvas-draw/",
+  "author": "created by Martin Beierling(mbeierling@gmail.com), modified by SyLi9527(sky14566541@gmail.com)",
+  "homepage": "maybe provide later",
   "license": "MIT",
-  "repository": "https://github.com/embiem/react-canvas-draw",
+  "repository": "https://github.com/SyLi9527/react-canvas-draw",
   "bugs": {
-    "url": "https://github.com/embiem/react-canvas-draw/issues"
+    "url": "https://github.com/SyLi9527/react-canvas-draw/issues"
   },
   "keywords": [
     "react-component",
@@ -67,5 +64,6 @@
     "reactjs",
     "canvas",
     "drawing"
-  ]
+  ],
+  "private": false
 }
