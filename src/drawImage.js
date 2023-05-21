@@ -33,15 +33,6 @@ export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY} =
   // decide which gap to fill
   if (nw < w) ar = w / nw;
   if (Math.abs(ar - 1) < 1e-14 && nh < h) ar = h / nh; // updated
-  nw *= ar;
-  nh *= ar;
-
-  // calc source rectangle
-  cw = iw / (nw / w);
-  ch = ih / (nh / h);
-
-  cx = (iw - cw) * offsetX;
-  cy = (ih - ch) * offsetY;
 
   // make sure source rectangle is valid
   if (cx < 0) cx = 0;
